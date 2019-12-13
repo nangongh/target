@@ -1,0 +1,20 @@
+
+GROUND TRUTH FOR: .\test\Image\core_battery00000968.jpg
+
+GROUND TRUTH FOR: .\test\Image\core_battery00000970.jpg
+
+GROUND TRUTH FOR: .\test\Image\coreless_battery00000001.jpg
+
+GROUND TRUTH FOR: .\test\Image\coreless_battery00000002.jpg
+
+GROUND TRUTH FOR: .\test\Image\coreless_battery00000005.jpg
+
+GROUND TRUTH FOR: .\test\Image\core_battery00000968.jpg
+
+GROUND TRUTH FOR: .\test\Image\core_battery00000970.jpg
+
+GROUND TRUTH FOR: .\test\Image\coreless_battery00000001.jpg
+
+GROUND TRUTH FOR: .\test\Image\coreless_battery00000002.jpg
+
+GROUND TRUTH FOR: .\test\Image\coreless_battery00000005.jpg
