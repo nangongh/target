@@ -27,3 +27,7 @@
 
 
 把预测出的位置画在图上，并保存在 ImageTarget目录中
+
+python -c "from test import *; test('C:\opt\data\Image','C:\opt\data\Anno')"
+
+python eval.py --img_path C:\opt\data\Image --anno_path C:\opt\data\Anno
