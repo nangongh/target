@@ -12,9 +12,9 @@ from data import VOCAnnotationTransform, VOCDetection, BaseTransform, VOC_CLASSE
 from ssd import build_ssd
 
 parser = argparse.ArgumentParser(description='Single Shot MultiBox Detection')
-parser.add_argument('--trained_model', default='weights/ssd_300_VOC0712.pth',
+parser.add_argument('--trained_model', default='weights/gpu.pth',
                     type=str, help='Trained state_dict file path to open')
-parser.add_argument('--save_folder', default='eval/', type=str,
+parser.add_argument('--save_folder', default='predicted_file/', type=str,
                     help='Dir to save results')
 parser.add_argument('--visual_threshold', default=0.6, type=float,
                     help='Final confidence threshold')
@@ -35,7 +35,15 @@ if not os.path.exists(args.save_folder):
 
 def test_net(save_folder, net, cuda, testset, transform, thresh):
     # dump predictions and assoc. ground truth to text file for now
-    filename = save_folder+'test1.txt'
+    file_set=save_folder+'file_set.txt'
+    core_annotion = save_folder+'det_test_带电芯充电宝.txt'
+    coreless_annotion=save_folder+'det_test_不带电芯充电宝.txt'
+    if os.path.exists(core_annotion):
+        os.remove(core_annotion)
+    if os.path.exists(coreless_annotion):
+        os.remove(coreless_annotion)
+    if os.path.exists(file_set):
+        os.remove(file_set)
     num_images = len(testset)
     for i in range(num_images):
         print('Testing image {:d}/{:d}....'.format(i+1, num_images))
@@ -43,11 +51,9 @@ def test_net(save_folder, net, cuda, testset, transform, thresh):
         img_id, annotation = testset.pull_anno(i)
         x = torch.from_numpy(transform(img)[0]).permute(2, 0, 1)
         x = Variable(x.unsqueeze(0))
-
-        with open(filename, mode='a') as f:
-            f.write('\nGROUND TRUTH FOR: '+img_id+'\n')
-            for box in annotation:
-                f.write('label: '+' || '.join(str(b) for b in box)+'\n')
+        img_name = os.path.basename(img_id).split('.')[0]
+        with open(file_set,'a+') as fi:
+            fi.write(img_name+'\n')
         if cuda:
             x = x.cuda()
 
@@ -56,30 +62,37 @@ def test_net(save_folder, net, cuda, testset, transform, thresh):
 
         im_det = img.copy()
         h, w, _ = im_det.shape
-        # im_det = Image.open(img_id)
-        # draw = ImageDraw.Draw(im_det)
-        # w, h = im_det.size
+
+
+
 
         need_save = False
         # scale each detection back up to the image
         scale = torch.Tensor([w, h, w, h])
         for i in range(detections.size(1)):
             j = 0
-            while detections[0, i, j, 0] >= 0.6:
+            while detections[0, i, j, 0] >= 0.01:
+                b=detections[0, i, j, 0].item()
                 item = (detections[0, i, j, 1:]*scale).cpu().numpy()
                 item = [int(n) for n in item]
                 chinese = labelmap[i-1]
+                #img_name=os.path.basename(img_id).split('.')[0]
+                #print('img:'+img_name+' '+str(item[0])+' '+str(item[1])+' '+str(item[2])+' '+str(item[3]))
                 # print(chinese+'gt\n\n')
                 if chinese[0] == '带':
+                    with open(core_annotion,'a+') as f:
+                        f.write(img_name+' '+str(b)+' '+str(item[0])+' '+str(item[1])+' '+str(item[2])+' '+str(item[3])+'\n');
                     chinese = 'Battery_Core'
                 else:
+                    with open(coreless_annotion,'a+') as f:
+                        f.write(img_name+' '+str(b)+' '+str(item[0])+' '+str(item[1])+' '+str(item[2])+' '+str(item[3])+'\n');
                     chinese = 'Battery_Coreless'
+                if b>=0.5:
+                    cv2.rectangle(im_det, (item[0], item[1]), (item[2], item[3]), (0, 255, 255), 2)
+                    cv2.putText(im_det, chinese, (item[0], item[1] - 5), 0, 0.6, (0, 255, 255), 2)
 
-                cv2.rectangle(im_det, (item[0], item[1]), (item[2], item[3]), (0, 255, 255), 2)
-                cv2.putText(im_det, chinese, (item[0], item[1] - 5), 0, 0.6, (0, 255, 255), 2)
-                # draw.rectangle((item[0], item[1], item[2], item[3]), outline='red', width=2)
-                # draw.textsize()
-                # draw.text((item[0], item[1] - 5), chinese, font=font, fill='red')
+
+
                 need_save = True
                 j += 1
 
@@ -88,19 +101,18 @@ def test_net(save_folder, net, cuda, testset, transform, thresh):
             dst_dir = os.path.dirname(dst_path)
             if not os.path.exists(dst_dir):
                 os.makedirs(dst_dir)
-            # im_det.save(dst_path)
             cv2.imwrite(dst_path, im_det)
 
 
-def test_voc():
+def test(img_dir,anno_dir):
     # load net
     num_classes = len(VOC_CLASSES) + 1 # +1 background
     net = build_ssd('test', 300, num_classes) # initialize SSD
-    net.load_state_dict(torch.load(args.trained_model))
+    net.load_state_dict(torch.load(args.trained_model,map_location='cpu'))
     net.eval()
     print('Finished loading model!')
     # load data
-    testset = VOCDetection(args.voc_root, target_transform=VOCAnnotationTransform())
+    testset = VOCDetection(img_dir,anno_dir, target_transform=VOCAnnotationTransform())
     if args.cuda:
         net = net.cuda()
         cudnn.benchmark = True
@@ -110,4 +122,4 @@ def test_voc():
              thresh=args.visual_threshold)
 
 if __name__ == '__main__':
-    test_voc()
+    test('','')

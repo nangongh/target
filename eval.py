@@ -40,6 +40,14 @@ parser.add_argument('--cuda', default=False, type=str2bool,
                     help='Use cuda to train model')
 parser.add_argument('--voc_root', default=VOC_ROOT,
                     help='Location of VOC root directory')
+parser.add_argument('--predicted_file', default='predicted_file/',
+                    help='Location of VOC root directory')
+parser.add_argument('--img_path', default='predicted_file/',
+                    help='Location of VOC root directory')
+parser.add_argument('--anno_path', default='predicted_file/',
+                    help='Location of VOC root directory')
+parser.add_argument('--file_set', default='predicted_file/file_set.txt',
+                    help='Location of VOC root directory')
 parser.add_argument('--cleanup', default=True, type=str2bool,
                     help='Cleanup and remove results files following eval')
 
@@ -58,9 +66,9 @@ if torch.cuda.is_available():
 else:
     torch.set_default_tensor_type('torch.FloatTensor')
 
-annopath = os.path.join(args.voc_root, 'Annotation', '%s.txt')
-imgpath = os.path.join(args.voc_root, 'Image', '%s.jpg')
-devkit_path = os.path.join(args.voc_root, 'eval')
+annopath = os.path.join(args.anno_path, '%s.txt')
+imgpath = os.path.join(args.img_path, '%s.jpg')
+devkit_path = os.path.join(args.predicted_file)
 dataset_mean = (104, 117, 123)
 set_type = 'val'
 imgsetpath = os.path.join(devkit_path, '{:s}.txt'.format(set_type))
@@ -147,8 +155,8 @@ def get_output_dir(name, phase):
 
 def get_voc_results_file_template(image_set, cls):
     # VOCdevkit/VOC2007/results/det_test_aeroplane.txt
-    filename = 'det_' + image_set + '_%s.txt' % (labelmap.index(cls))
-    filedir = os.path.join(devkit_path, 'resluts')
+    filename = 'det_test_%s.txt' % (cls)
+    filedir = os.path.join(devkit_path)
     if not os.path.exists(filedir):
         os.makedirs(filedir)
     path = os.path.join(filedir, filename)
@@ -182,8 +190,7 @@ def do_python_eval(output_dir='output', use_07=True):
     for i, cls in enumerate(labelmap):
         filename = get_voc_results_file_template(set_type, cls)
         rec, prec, ap = voc_eval(
-           filename, annopath, imgsetpath, cls, cachedir,
-           ovthresh=0.5, use_07_metric=use_07_metric)
+           filename, annopath, args.file_set, cls, cachedir, ovthresh=0.1,use_07_metric=use_07_metric)
         aps += [ap]
         print('AP for {} = {:.4f}'.format(cls, ap))
         with open(os.path.join(output_dir, 'catalog-{}_pr.pkl'.format(labelmap.index(cls))), 'wb') as f:
@@ -259,8 +266,8 @@ def voc_eval(detpath,
         # load annots
         recs = {}
         for i, imagename in enumerate(imagenames):
-            print('file_name',imagenames)
-            recs[imagename] = parse_rec(imgpath % imagename, annopath % (imagename))
+
+            recs[imagename] = parse_rec(imgpath %(imagename), annopath % (imagename))
             if i % 100 == 0:
                 print('Reading annotation for {:d}/{:d}'.format(i + 1, len(imagenames)))
         # save
@@ -276,26 +283,26 @@ def voc_eval(detpath,
     class_recs = {}
     npos = 0
     for imagename in imagenames:
+        #image_name = imagename.split(' ')[0]
         R = [obj for obj in recs[imagename] if obj['name'] == classname]
         bbox = np.array([x['bbox'] for x in R])
         difficult = np.array([x['difficult'] for x in R]).astype(np.bool)
         det = [False] * len(R)
-        npos = npos + sum(~difficult)
+        npos = npos + sum(difficult)
         class_recs[imagename] = {'bbox': bbox,
                                  'difficult': difficult,
                                  'det': det}
+        #print(class_recs)
 
     # read dets
-    detfile = detpath.format(classname)
-    with open(detfile, 'r') as f:
+    #detfile = detpath.format(classname)
+    with open(detpath, 'r') as f:
         lines = f.readlines()
     if any(lines) == 1:
-
         splitlines = [x.strip().split(' ') for x in lines]
         image_ids = [x[0] for x in splitlines]
         confidence = np.array([float(x[1]) for x in splitlines])
         BB = np.array([[float(z) for z in x[2:]] for x in splitlines])
-
         # sort by confidence
         sorted_ind = np.argsort(-confidence)
         sorted_scores = np.sort(-confidence)
@@ -418,6 +425,8 @@ def evaluate_detections(box_list, output_dir, dataset):
 
 
 if __name__ == '__main__':
+    do_python_eval(args.predicted_file)
+    '''
     # load net
     num_classes = len(labelmap) + 1                      # +1 for background
     net = build_ssd('test', 300, num_classes)            # initialize SSD
@@ -434,3 +443,4 @@ if __name__ == '__main__':
     test_net(args.save_folder, net, args.cuda, dataset,
              BaseTransform(net.size, dataset_mean), args.top_k, 300,
              thresh=args.confidence_threshold)
+    '''

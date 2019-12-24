@@ -94,37 +94,37 @@ class VOCDetection(data.Dataset):
             (default: 'VOC2007')
     """
 
-    def __init__(self, root,
+    def __init__(self, img_dir,anno_dir,
                  # image_sets=['core_3000', 'coreless_3000'],
                  transform=None, target_transform=VOCAnnotationTransform(),
                  dataset_name='ChargePal'):
-        self.root = root
+        #self.root = root
         # self.image_set = image_sets
         self.transform = transform
         self.target_transform = target_transform
         self.name = dataset_name
         self.ids = list()
         self.anno_path_arr = list()
-        if not isinstance(root, (list, tuple)):
-            root = [root]
-        for dir_name in root:
-            img_dir = os.path.join(dir_name, 'Image')
-            anno_dir = os.path.join(dir_name, 'Annotation')
-            for name in sorted(os.listdir(img_dir)):
-                if not name.endswith('jpg'):
-                    continue
-                anno_path = os.path.join(anno_dir, name).replace('.jpg', '.txt')
-                if not os.path.isfile(anno_path):
-                    continue
-                img_path = os.path.join(img_dir, name)
-                try:
-                    img = cv2.imread(img_path)
-                    height, width, channels = img.shape
-                except Exception:
-                    print('>>>error image>>>> {}'.format(img_path))
-                    continue
-                self.ids.append(img_path)
-                self.anno_path_arr.append(anno_path)
+        #if not isinstance(root, (list, tuple)):
+            #root = [root]
+        #for dir_name in root:
+            #img_dir = os.path.join(dir_name, 'Image')
+            #anno_dir = os.path.join(dir_name, 'Annotation')
+        for name in sorted(os.listdir(img_dir)):
+            if not name.endswith('jpg'):
+                continue
+            anno_path = os.path.join(anno_dir, name).replace('.jpg', '.txt')
+            if not os.path.isfile(anno_path):
+                continue
+            img_path = os.path.join(img_dir, name)
+            try:
+                img = cv2.imread(img_path)
+                height, width, channels = img.shape
+            except Exception:
+                print('>>>error image>>>> {}'.format(img_path))
+                continue
+            self.ids.append(img_path)
+            self.anno_path_arr.append(anno_path)
 
     def __getitem__(self, index):
         im, gt, h, w = self.pull_item(index)
